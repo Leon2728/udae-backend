@@ -1,0 +1,13 @@
+# UDAE Backend - Minimal project configuration
+# Dependencies will be added incrementally as architecture solidifies
+
+[project]
+name = "udae-backend"
+version = "0.1.0"
+description = "Deterministic normative decision engine for academic document auditing"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+
+[project.urls]
+Repository = "https://github.com/Leon2728/udae-backend"
