@@ -24,18 +24,25 @@ class Decision:
     decision_hash: str = field(default="", init=False)
     
     def __post_init__(self) -> None:
-        """Compute decision_hash deterministically."""
-        # Sort verdicts by verdict_id for determinism
+        """Compute decision_hash deterministically.
+        
+        Uses canonical ordering of verdict_ids to ensure hash stability
+        regardless of input order.
+        """
+        # Sort verdicts by verdict_id for canonical order (determinism)
         sorted_blocking = sorted([v.verdict_id for v in self.blocking_failures])
         sorted_non_blocking = sorted([v.verdict_id for v in self.non_blocking_failures])
         sorted_all = sorted([v.verdict_id for v in self.all_verdicts])
         
+        # Create hashable dict with stable content
         decision_dict = {
             'status': self.status,
             'blocking_failures': sorted_blocking,
             'non_blocking_failures': sorted_non_blocking,
             'all_verdicts': sorted_all,
         }
+        
+        # Compute SHA-256 hash deterministically
         object.__setattr__(self, 'decision_hash', hash_json(decision_dict))
     
     def __repr__(self) -> str:
