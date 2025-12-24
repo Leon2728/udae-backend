@@ -1,33 +1,29 @@
 """Araña stage for pipeline integration."""
 
-from dataclasses import dataclass
-from typing import List, Any
+from typing import List
+from core.kernel.stages import StageResult
+from core.kernel.context import PipelineContext
 from core.models.verdict import Verdict
 from .aggregator import aggregate_verdicts
 from .precedence import apply_precedence
 from .decision import Decision
 
 
-@dataclass(frozen=True)
-class StageResult:
-    """Pipeline stage result."""
-    blocking: bool
-    ok: bool
-    output: Any
-
-
 class AranaStage:
     """Pipeline stage for Araña decision engine."""
     
-    def execute(self, verdicts: List[Verdict]) -> StageResult:
-        """Execute decision logic on verdicts.
+    def execute(self, context: PipelineContext) -> StageResult:
+        """Execute decision logic on verdicts from context.
         
         Args:
-            verdicts: List of Verdict instances from Amanecer
+            context: PipelineContext containing verdicts in meta["verdicts"]
             
         Returns:
             StageResult with blocking=True, ok based on decision, output=Decision
         """
+        # Extract verdicts from context deterministically
+        verdicts: List[Verdict] = list(context.meta.get("verdicts", []))
+        
         # Aggregate verdicts
         blocking_failures, non_blocking_failures, _, _ = aggregate_verdicts(verdicts)
         
