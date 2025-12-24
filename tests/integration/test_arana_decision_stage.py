@@ -2,7 +2,9 @@
 
 import pytest
 from core.models.verdict import Verdict
-from core.arana.stage import AranaStage, StageResult
+from core.kernel.stages import StageResult
+from core.kernel.context import PipelineContext
+from core.arana.stage import AranaStage
 from core.arana.decision import Decision
 
 
@@ -21,7 +23,8 @@ def test_fail_due_to_blocking_failure():
         )
     ]
     
-    result = stage.execute(verdicts)
+    context = PipelineContext(meta={"verdicts": verdicts})
+    result = stage.execute(context)
     
     assert isinstance(result, StageResult)
     assert result.blocking is True
@@ -55,7 +58,8 @@ def test_pass_without_blocking_failures():
         )
     ]
     
-    result = stage.execute(verdicts)
+    context = PipelineContext(meta={"verdicts": verdicts})
+    result = stage.execute(context)
     
     assert result.ok is True
     assert result.output.status == "PASS"
@@ -94,7 +98,8 @@ def test_mixed_verdicts_with_blocking_fail():
         )
     ]
     
-    result = stage.execute(verdicts)
+    context = PipelineContext(meta={"verdicts": verdicts})
+    result = stage.execute(context)
     
     assert result.ok is False
     assert result.output.status == "FAIL"
@@ -118,8 +123,11 @@ def test_decision_hash_determinism():
         )
     ]
     
-    result1 = stage.execute(verdicts)
-    result2 = stage.execute(verdicts)
+    context1 = PipelineContext(meta={"verdicts": verdicts})
+    context2 = PipelineContext(meta={"verdicts": verdicts})
+    
+    result1 = stage.execute(context1)
+    result2 = stage.execute(context2)
     
     assert result1.output.decision_hash == result2.output.decision_hash
     assert result1.output.decision_hash != ""
@@ -147,8 +155,11 @@ def test_different_order_same_decision():
         severity="error"
     )
     
-    result1 = stage.execute([v1, v2])
-    result2 = stage.execute([v2, v1])
+    context1 = PipelineContext(meta={"verdicts": [v1, v2]})
+    context2 = PipelineContext(meta={"verdicts": [v2, v1]})
+    
+    result1 = stage.execute(context1)
+    result2 = stage.execute(context2)
     
     assert result1.output.decision_hash == result2.output.decision_hash
     assert result1.output.status == result2.output.status
@@ -170,7 +181,8 @@ def test_all_pass_verdicts():
         for i in range(5)
     ]
     
-    result = stage.execute(verdicts)
+    context = PipelineContext(meta={"verdicts": verdicts})
+    result = stage.execute(context)
     
     assert result.ok is True
     assert result.output.status == "PASS"
@@ -194,7 +206,8 @@ def test_multiple_blocking_failures():
         for i in range(3)
     ]
     
-    result = stage.execute(verdicts)
+    context = PipelineContext(meta={"verdicts": verdicts})
+    result = stage.execute(context)
     
     assert result.ok is False
     assert result.output.status == "FAIL"
@@ -205,10 +218,25 @@ def test_empty_verdicts_list():
     """Test decision with empty verdict list."""
     stage = AranaStage()
     
-    result = stage.execute([])
+    context = PipelineContext(meta={"verdicts": []})
+    result = stage.execute(context)
     
     assert result.ok is True
     assert result.output.status == "PASS"
     assert len(result.output.blocking_failures) == 0
+    assert len(result.output.all_verdicts) == 0
+    assert result.output.decision_hash != ""
+
+
+def test_missing_verdicts_in_context():
+    """Test stage handles missing verdicts key gracefully."""
+    stage = AranaStage()
+    
+    # Context without verdicts key
+    context = PipelineContext(meta={})
+    result = stage.execute(context)
+    
+    assert result.ok is True
+    assert result.output.status == "PASS"
     assert len(result.output.all_verdicts) == 0
     assert result.output.decision_hash != ""
